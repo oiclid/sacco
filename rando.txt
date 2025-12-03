@@ -1,0 +1,19 @@
+rewrite savings/admin.py so that:
+
+Superadmins see all accounts
+
+Admins see only accounts where account.user == request.user
+
+Viewers see nothing
+
+It will preserve all functionality:
+
+Inline transaction ledger
+
+Post monthly interest
+
+Export CSV
+
+Pretty balance display
+
+Ordering, filtering, and search

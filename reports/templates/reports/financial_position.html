@@ -1,0 +1,85 @@
+{% extends "reports/base.html" %}
+
+{% block title %}Financial Position{% endblock %}
+
+{% block content %}
+<h1>Financial Position Report</h1>
+
+<!-- Filters -->
+<form method="get" class="mb-3">
+    <label>As At: <input type="date" name="as_at" value="{{ request.GET.as_at }}"></label>
+    <button type="submit">Filter</button>
+    <a href="{% url 'financial-position' %}">Reset</a>
+</form>
+
+<!-- Export Links -->
+<div class="mb-3">
+    <a href="?{% querystring request.GET 'export'='csv' %}">Export CSV</a> |
+    <a href="?{% querystring request.GET 'export'='json' %}">Export JSON</a> |
+    <a href="?{% querystring request.GET 'export'='xlsx' %}">Export XLSX</a>
+</div>
+
+<!-- Assets & Liabilities Table -->
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th>Amount (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th colspan="2">Assets</th>
+        </tr>
+        {% for key, value in assets.items %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+            <th>Total Assets</th>
+            <th>{{ total_assets|floatformat:2 }}</th>
+        </tr>
+
+        <tr>
+            <th colspan="2">Liabilities</th>
+        </tr>
+        {% for key, value in liabilities.items %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+            <th>Total Liabilities</th>
+            <th>{{ total_liabilities|floatformat:2 }}</th>
+        </tr>
+
+        <tr>
+            <th>Net Position</th>
+            <th>{{ net_position|floatformat:2 }}</th>
+        </tr>
+    </tbody>
+</table>
+
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+th, td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+th {
+    background-color: #f4f4f4;
+    text-align: left;
+}
+form label {
+    margin-right: 10px;
+}
+</style>
+
+{% endblock %}

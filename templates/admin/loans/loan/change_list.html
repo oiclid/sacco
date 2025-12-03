@@ -1,0 +1,195 @@
+{% extends "admin/change_list.html" %}
+
+{% block content %}
+
+<style>
+.dashboard-box {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+.dashboard-card {
+    padding: 15px 20px;
+    border-radius: 8px;
+    background: var(--body-bg);
+    border: 1px solid var(--border-color);
+    width: 220px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.dashboard-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+}
+.dashboard-value {
+    font-size: 22px;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+/* Chart container styling */
+.chart-block {
+    margin: 35px 0;
+    padding: 20px;
+    background: var(--body-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+.chart-block h3 {
+    margin-bottom: 15px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+/* Collapsible wrapper */
+.dashboard-toggle {
+    margin-bottom: 15px;
+}
+</style>
+
+<div class="dashboard-toggle">
+    <button
+        onclick="document.getElementById('dashboard-analytics').classList.toggle('hidden');"
+        style="
+        padding: 8px 14px;
+        background: #0d6efd;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        "
+    >
+        Toggle Dashboard
+    </button>
+</div>
+
+<div id="dashboard-analytics">
+
+    <!-- Summary Cards -->
+    <div class="dashboard-box">
+        <div class="dashboard-card">
+            <div class="dashboard-title">Total Loans</div>
+            <div class="dashboard-value">{{ stats.total_loans }}</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-title">Total Repaid</div>
+            <div class="dashboard-value">₦{{ stats.total_repaid|floatformat:2 }}</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-title">Total Outstanding</div>
+            <div class="dashboard-value">₦{{ stats.total_outstanding|floatformat:2 }}</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-title">Defaulted Loans</div>
+            <div class="dashboard-value">{{ stats.defaulted }}</div>
+        </div>
+        <div class="dashboard-card">
+            <div class="dashboard-title">Active Loans</div>
+            <div class="dashboard-value">{{ stats.active }}</div>
+        </div>
+    </div>
+
+    <!-- Charts Area -->
+    <div class="chart-block">
+        <h3>Loan Count by Type</h3>
+        <canvas id="loanCountByType"></canvas>
+    </div>
+
+    <div class="chart-block">
+        <h3>Total Loan Amount by Type</h3>
+        <canvas id="amountByType"></canvas>
+    </div>
+
+    <div class="chart-block">
+        <h3>Loan Status Distribution</h3>
+        <canvas id="loanStatusPie"></canvas>
+    </div>
+
+    <div class="chart-block">
+        <h3>Loans Created per Month</h3>
+        <canvas id="loanTrend"></canvas>
+    </div>
+
+</div>
+
+<!-- Render normal Django admin content -->
+{{ block.super }}
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    // Chart Data from Django Admin queryset (added in admin.py)
+    const loanCountByType = {{ loan_count_by_type|safe }};
+    const totalAmountByType = {{ total_amount_by_type|safe }};
+    const loanStatusData = {{ loan_count_by_status|safe }};
+    const loanTrendData = {{ monthly_trend|safe }};  // Provided in admin.py
+
+    // Extract Labels & Values
+    const typeLabels = loanCountByType.map(i => i.loan_type);
+    const typeCounts = loanCountByType.map(i => i.count);
+    const typeAmounts = totalAmountByType.map(i => i.total);
+
+    const statusLabels = loanStatusData.map(i => i.status);
+    const statusCounts = loanStatusData.map(i => i.count);
+
+    const trendLabels = loanTrendData.map(i => i.month);
+    const trendValues = loanTrendData.map(i => i.count);
+
+    // Chart 1: Loan Count by Type
+    new Chart(document.getElementById("loanCountByType"), {
+        type: "bar",
+        data: {
+            labels: typeLabels,
+            datasets: [{
+                label: "Loans",
+                data: typeCounts
+            }]
+        }
+    });
+
+    // Chart 2: Total Amount by Type
+    new Chart(document.getElementById("amountByType"), {
+        type: "bar",
+        data: {
+            labels: typeLabels,
+            datasets: [{
+                label: "Total Amount",
+                data: typeAmounts
+            }]
+        },
+        options: { indexAxis: "y" }
+    });
+
+    // Chart 3: Loan Status Pie
+    new Chart(document.getElementById("loanStatusPie"), {
+        type: "pie",
+        data: {
+            labels: statusLabels,
+            datasets: [{
+                data: statusCounts
+            }]
+        }
+    });
+
+    // Chart 4: Monthly Loan Trend
+    new Chart(document.getElementById("loanTrend"), {
+        type: "line",
+        data: {
+            labels: trendLabels,
+            datasets: [{
+                label: "Loans Created",
+                data: trendValues,
+                tension: 0.3,
+                fill: false
+            }]
+        }
+    });
+
+});
+</script>
+
+{% endblock %}

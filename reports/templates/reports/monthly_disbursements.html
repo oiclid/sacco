@@ -1,0 +1,58 @@
+{% extends "reports/base.html" %}
+
+{% block title %}Monthly Loan Disbursements - {{ month }}{% endblock %}
+
+{% block content %}
+<h1>Monthly Loan Disbursements - {{ month }}</h1>
+
+<!-- Export Links -->
+<div class="mb-3">
+    <a href="?export=csv">Export CSV</a> |
+    <a href="?export=json">Export JSON</a> |
+    <a href="?export=xlsx">Export XLSX</a>
+</div>
+
+<!-- Total Disbursements Summary -->
+<h2>Total Disbursed: ₦{{ total|floatformat:2 }}</h2>
+
+<table class="table table-bordered table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Member</th>
+            <th>Loan Type</th>
+            <th>Principal (₦)</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for tx in rows %}
+        <tr>
+            <td>{{ tx.date }}</td>
+            <td>{{ tx.account.user.username }}</td>
+            <td>{{ tx.loan.category|capfirst|replace:"_"," " }}</td>
+            <td>{{ tx.amount|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No disbursements recorded for this month.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+th {
+    background: #f4f4f4;
+}
+</style>
+
+{% endblock %}

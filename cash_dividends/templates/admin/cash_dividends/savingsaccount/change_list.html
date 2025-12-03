@@ -1,0 +1,150 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        .dashboard-container {
+            padding: 20px;
+            margin-bottom: 30px;
+            background: #fff;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e1e1e1;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        .chart-container {
+            margin-top: 40px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+    </style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="dashboard-container">
+    <h2>Savings Accounts Dashboard</h2>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <span>Total Balances</span>
+            <div class="stat-value">₦{{ dashboard.total_balances|floatformat:2 }}</div>
+        </div>
+
+        <div class="stat-box">
+            <span>Total Dividends</span>
+            <div class="stat-value">₦{{ dashboard.total_dividends|floatformat:2 }}</div>
+        </div>
+
+        <div class="stat-box">
+            <span>Total Withdrawals</span>
+            <div class="stat-value">₦{{ dashboard.total_withdrawals|floatformat:2 }}</div>
+        </div>
+
+        <div class="stat-box">
+            <span>Total Charges</span>
+            <div class="stat-value">₦{{ dashboard.total_charges|floatformat:2 }}</div>
+        </div>
+
+        <div class="stat-box">
+            <span>Active Accounts</span>
+            <div class="stat-value">{{ dashboard.active_accounts }}</div>
+        </div>
+
+        <div class="stat-box">
+            <span>Inactive Accounts</span>
+            <div class="stat-value">{{ dashboard.inactive_accounts }}</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ------------ CHARTS ---------------- -->
+
+<div class="chart-container">
+    <h3>Account Balances</h3>
+    <canvas id="balancesChart" height="100"></canvas>
+</div>
+
+<div class="chart-container">
+    <h3>Dividends vs Withdrawals</h3>
+    <canvas id="incomeChart" height="100"></canvas>
+</div>
+
+
+<script>
+    const accounts = JSON.parse('{{ accounts_json|safe|escapejs }}');
+
+    const labels = accounts.map(a => `${a.user} (${a.account_type})`);
+    const balances = accounts.map(a => a.balance);
+    const dividends = accounts.map(a => a.total_dividends);
+    const withdrawals = accounts.map(a => a.total_withdrawals);
+
+    // ---- Balances Chart ----
+    new Chart(document.getElementById("balancesChart"), {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Balance (₦)",
+                data: balances,
+                backgroundColor: "rgba(54, 162, 235, 0.6)",
+            }]
+        }
+    });
+
+    // ---- Dividends vs Withdrawals ----
+    new Chart(document.getElementById("incomeChart"), {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Dividends (₦)",
+                    data: dividends,
+                    borderWidth: 2,
+                    fill: false,
+                    borderColor: "rgba(75, 192, 192, 1)"
+                },
+                {
+                    label: "Withdrawals (₦)",
+                    data: withdrawals,
+                    borderWidth: 2,
+                    fill: false,
+                    borderColor: "rgba(255, 99, 132, 1)"
+                }
+            ]
+        }
+    });
+</script>
+
+{{ block.super }}
+
+{% endblock %}

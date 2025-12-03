@@ -1,0 +1,66 @@
+{% extends "reports/base.html" %}
+
+{% block title %}Bank Reconciliation{% endblock %}
+
+{% block content %}
+<h1>Bank Reconciliation Report</h1>
+
+<!-- Filters -->
+<form method="get" class="mb-3">
+    <label>As At: <input type="date" name="as_at" value="{{ request.GET.as_at }}"></label>
+    <button type="submit">Filter</button>
+    <a href="{% url 'bank-reconciliation' %}">Reset</a>
+</form>
+
+<!-- Export Links -->
+<div class="mb-3">
+    <a href="?{% querystring request.GET 'export'='csv' %}">Export CSV</a> |
+    <a href="?{% querystring request.GET 'export'='json' %}">Export JSON</a> |
+    <a href="?{% querystring request.GET 'export'='xlsx' %}">Export XLSX</a>
+</div>
+
+<!-- Reconciliation Table -->
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Bank Account</th>
+            <th>Bank Balance (₦)</th>
+            <th>Book Balance (₦)</th>
+            <th>Difference (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for account in accounts %}
+        <tr>
+            <td>{{ account.name }}</td>
+            <td>{{ account.bank_balance|floatformat:2 }}</td>
+            <td>{{ account.book_balance|floatformat:2 }}</td>
+            <td>{{ account.bank_balance|floatformat:2|add:"-"|add:account.book_balance|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No accounts found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+th, td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+th {
+    background-color: #f4f4f4;
+}
+form label {
+    margin-right: 10px;
+}
+</style>
+
+{% endblock %}

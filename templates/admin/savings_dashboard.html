@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Savings Dashboard</h1>
+
+<style>
+.card {
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 7px rgba(0,0,0,0.12);
+}
+</style>
+
+<div class="card">
+    <h2>Total Balances</h2>
+    <h3>₦{{ total_balances|floatformat:2 }}</h3>
+</div>
+
+<div class="card">
+    <h2>Interest Earned This Month</h2>
+    <h3>₦{{ interest_this_month|floatformat:2 }}</h3>
+</div>
+
+<div class="card">
+    <h2>Active Accounts</h2>
+    <ul>
+        <li>Fixed Savings: {{ active_fixed }}</li>
+        <li>Target Savings: {{ active_target }}</li>
+        <li>Fixed Deposits: {{ active_fd }}</li>
+        <li>Investments: {{ active_invest }}</li>
+    </ul>
+</div>
+
+<a class="button" href="/admin/">Back to admin</a>
+{% endblock %}

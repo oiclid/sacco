@@ -1,0 +1,75 @@
+{% extends "reports/base.html" %}
+
+{% block title %}Bank Statement{% endblock %}
+
+{% block content %}
+<h1>Bank Statement</h1>
+
+<!-- Filters -->
+<form method="get" class="mb-3">
+    <label>From: <input type="date" name="from" value="{{ request.GET.from }}"></label>
+    <label>To: <input type="date" name="to" value="{{ request.GET.to }}"></label>
+    <label>Bank Account: 
+        <input type="text" name="account" value="{{ request.GET.account }}" placeholder="Bank Account">
+    </label>
+    <button type="submit">Filter</button>
+    <a href="{% url 'bank-statement' %}">Reset</a>
+</form>
+
+<!-- Export Links -->
+<div class="mb-3">
+    <a href="?{% querystring request.GET 'export'='csv' %}">Export CSV</a> |
+    <a href="?{% querystring request.GET 'export'='json' %}">Export JSON</a> |
+    <a href="?{% querystring request.GET 'export'='xlsx' %}">Export XLSX</a>
+</div>
+
+<!-- Statement Table -->
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Transaction Reference</th>
+            <th>Description</th>
+            <th>Debit (₦)</th>
+            <th>Credit (₦)</th>
+            <th>Balance (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tx in transactions %}
+        <tr>
+            <td>{{ tx.date }}</td>
+            <td>{{ tx.reference }}</td>
+            <td>{{ tx.description }}</td>
+            <td>{{ tx.debit|floatformat:2 }}</td>
+            <td>{{ tx.credit|floatformat:2 }}</td>
+            <td>{{ tx.balance|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6">No transactions found for the selected period.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+th, td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+th {
+    background-color: #f4f4f4;
+}
+form label {
+    margin-right: 10px;
+}
+</style>
+
+{% endblock %}

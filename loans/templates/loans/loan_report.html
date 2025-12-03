@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-3">Loan Report & Analytics</h1>
+
+<style>
+/* Polished CSS */
+.container-flex { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; }
+.controls { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.controls .form-group { display:flex; flex-direction:column; }
+.card { background:#fff; border:1px solid #e6e6e6; padding:14px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03); }
+.table-wrap { margin-top:18px; }
+.pagination { display:flex; gap:6px; align-items:center; margin-top:12px; }
+.sortable { cursor:pointer; text-decoration:underline; }
+.offcanvas { position: fixed; right: -500px; top: 0; width: 420px; height: 100%; background: #fff; box-shadow: -4px 0 8px rgba(0,0,0,0.1); transition: right 0.25s; padding: 20px; z-index: 2000; overflow-y:auto; }
+.offcanvas.open { right: 0; }
+.offcanvas .close-btn { cursor:pointer; color:#666; float:right; font-size:18px; }
+.small-muted { color:#666; font-size:12px; }
+.legend-dot { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+.controls .btn { padding:6px 10px; border-radius:6px; border:none; background:#0d6efd; color:#fff; }
+.per-page { margin-left:10px; }
+</style>
+
+<!-- Filter + export + pagination controls -->
+<div class="container-flex">
+    <div style="flex:1 1 720px;">
+        <form method="get" class="controls">
+            <div class="form-group">
+                <label for="loan_type">Loan Type</label>
+                <select name="loan_type" id="loan_type">
+                    <option value="">All</option>
+                    {% for code, name in loan_types %}
+                        <option value="{{ code }}" {% if selected_type == code %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select name="status" id="status">
+                    <option value="">All</option>
+                    {% for code, name in statuses %}
+                        <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label>&nbsp;</label>
+                <button class="btn" type="submit">Apply</button>
+            </div>
+
+            <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+                <div class="card small-muted">
+                    <div>Total Loans: <strong>{{ paginator.count }}</strong></div>
+                    <div class="small-muted">Showing {{ loans|length }} on this page</div>
+                </div>
+
+                <div class="card small-muted">
+                    <div>Total Amount: <strong>₦{{ total_amount|floatformat:2 }}</strong></div>
+                </div>
+
+                <div class="per-page">
+                    <label for="per_page">Per page</label>
+                    <select id="per_page" onchange="onPerPageChange()">
+                        {% for n in [10,25,50,100] %}
+                            <option value="{{ n }}" {% if per_page|int == n %}selected{% endif %}>{{ n }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+
+        <!-- Export Links -->
+        <div style="margin-top:12px; margin-bottom:8px;">
+            <a class="btn" href="?{% if selected_type %}loan_type={{ selected_type }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}export=csv">Export CSV</a>
+            <a class="btn" href="?{% if selected_type %}loan_type={{ selected_type }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}export=xlsx">Export XLSX</a>
+            <a class="btn" href="?{% if selected_type %}loan_type={{ selected_type }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}export=pdf">Export PDF</a>
+        </div>
+
+        <!-- Dashboard cards -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:12px;">
+            <div class="card">
+                <div class="small-muted">Total Repaid</div>
+                <div class="dashboard-value">₦{{ total_repaid|floatformat:2 }}</div>
+            </div>
+            <div class="card">
+                <div class="small-muted">Total Outstanding</div>
+                <div class="dashboard-value">₦{{ total_outstanding|floatformat:2 }}</div>
+            </div>
+            <div class="card">
+                <div class="small-muted">Defaulted Loans</div>
+                <div class="dashboard-value">{{ loan_count_by_status|length }}</div>
+            </div>
+            <div class="card">
+                <div class="small-muted">Active Loans</div>
+                <div class="dashboard-value">{{ paginator.count|add:"0"|int }}</div>
+            </div>
+        </div>
+
+        <!-- Chart controls (editable charts / comparisons) -->
+        <div style="display:flex; gap:12px; margin-top:18px; align-items:center;">
+            <label class="small-muted">Chart Metric:</label>
+            <select id="chartMetric">
+                <option value="amount">Amount</option>
+                <option value="count">Count</option>
+                <option value="outstanding">Outstanding</option>
+            </select>
+
+            <label class="small-muted">Compare by:</label>
+            <select id="chartCompare">
+                <option value="type">Loan Type</option>
+                <option value="status">Status</option>
+            </select>
+
+            <button class="btn" onclick="renderCharts()">Update Charts</button>
+        </div>
+
+        <!-- Charts -->
+        <div style="margin-top:18px;">
+            <div class="card chart-block">
+                <h5>Primary chart</h5>
+                <canvas id="primaryChart" height="150"></canvas>
+            </div>
+
+            <div class="card chart-block" style="margin-top:12px;">
+                <h5>Monthly Trend</h5>
+                <canvas id="trendChart" height="120"></canvas>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div style="margin-top:12px;">
+            <input id="loanSearch" placeholder="Search loans client-side..." style="padding:8px; width:280px; border-radius:6px;">
+        </div>
+
+        <!-- Loan Table -->
+        <div class="table-wrap">
+            <table class="loan-table" id="loanTable">
+                <thead>
+                    <tr>
+                        {% comment %} sortable headers: toggle asc/desc with ordering param {% endcomment %}
+                        {% for col, label, field in [
+                            ("id","ID","id"),
+                            ("user","User","user__username"),
+                            ("loan_type","Type","loan_type"),
+                            ("amount","Amount","amount"),
+                            ("interest_rate","Interest Rate","interest_rate"),
+                            ("term_months","Term","term_months"),
+                            ("status","Status","status"),
+                            ("total_repaid","Total Repaid","created_at"),  # computed - not sortable server-side
+                            ("outstanding","Outstanding","created_at"),    # computed - not sortable server-side
+                            ("created_at","Created At","created_at"),
+                        ] %}
+                        <th>
+                            {% if field in ["amount","interest_rate","term_months","status","created_at","id","loan_type"] %}
+                                {% comment %} build ordering link preserving filters & per_page {% endcomment %}
+                                {% if ordering == field %}{% set next_order = "-"|add:field %}{% else %}{% set next_order = field %}{% endif %}
+                                <a class="sortable" href="?{% if selected_type %}loan_type={{ selected_type }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}per_page={{ per_page }}&ordering={{ field }}">{{ label }}</a>
+                            {% else %}
+                                {{ label }}
+                            {% endif %}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    <tr data-loan-id="{{ loan.pk }}" class="loan-row" style="cursor:pointer;">
+                        <td>{{ loan.pk }}</td>
+                        <td>{{ loan.user.username }}</td>
+                        <td>{{ loan.loan_type }}</td>
+                        <td>₦{{ loan.amount|floatformat:2 }}</td>
+                        <td>{{ loan.interest_rate }}%</td>
+                        <td>{{ loan.term_months }}</td>
+                        <td>{{ loan.status }}</td>
+                        <td>₦{{ loan.total_repaid|floatformat:2 }}</td>
+                        <td>₦{{ loan.outstanding|floatformat:2 }}</td>
+                        <td>{{ loan.created_at }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10">No loans found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a class="btn" href="?{% if selected_type %}loan_type={{ selected_type }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}per_page={{ per_page }}&page={{ page_obj.previous_page_number }}&ordering={{ ordering }}">Prev</a>
+            {% endif %}
+
+            <span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+
+            {% if page_obj.has_next %}
+                <a class="btn" href="?{% if selected_type %}loan_type={{ selected_type }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}per_page={{ per_page }}&page={{ page_obj.next_page_number }}&ordering={{ ordering }}">Next</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Side panel (loan details) -->
+    <div>
+        <div id="loanDetailPanel" class="offcanvas" aria-hidden="true">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h4>Loan Details</h4>
+                <div class="close-btn" onclick="togglePanel(false)">✕</div>
+            </div>
+            <div id="loanDetailContent">
+                <p class="small-muted">Select a loan row to see details here.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JSON data for client charts and interactive functions -->
+<script id="loans-json" type="application/json">{{ page_obj.object_list|json_script:"loans-data" }}</script>
+<script id="all-loans-json" type="application/json">{{ total_amount_by_type|safe|escapejs }}</script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+/* helpers to read query params */
+function getQueryParam(name) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name);
+}
+function setQueryParam(name, value) {
+    const params = new URLSearchParams(window.location.search);
+    if (value === null) params.delete(name);
+    else params.set(name, value);
+    history.replaceState(null, '', window.location.pathname + '?' + params.toString());
+}
+
+/* per-page change handler */
+function onPerPageChange(){
+    const per = document.getElementById('per_page').value;
+    const params = new URLSearchParams(window.location.search);
+    params.set('per_page', per);
+    params.set('page', 1);
+    window.location.search = params.toString();
+}
+
+/* parse loans (page-level) and all loans (global aggregates) */
+const pageLoans = JSON.parse(document.getElementById("loans-data").textContent);
+const allTypeData = {{ total_amount_by_type|safe }};
+const allStatusData = {{ total_amount_by_status|safe }};
+const monthlyTrend = {{ monthly_trend|safe }};
+
+function buildAggregates(metric, compareBy) {
+    // metric: amount | count | outstanding
+    // compareBy: type | status
+    const buckets = {};
+    const loans = JSON.parse(document.getElementById("loans-data").textContent);
+
+    // use all loans for aggregates (change to pageLoans to restrict)
+    const allLoans = [];
+    // gather full loan list from pageLoans only; for richer data, consider fetching server-side
+    // Here we'll use pageLoans for client-side aggregated charts (fast). For global charts, template provided lists.
+    pageLoans.forEach(l => allLoans.push(l));
+
+    // compute
+    allLoans.forEach(l => {
+        const key = (compareBy === "type") ? l.loan_type : l.status;
+        let value = 0;
+        if (metric === "amount") value = parseFloat(l.amount || 0);
+        else if (metric === "count") value = 1;
+        else if (metric === "outstanding") value = parseFloat(l.outstanding || 0);
+        buckets[key] = (buckets[key] || 0) + value;
+    });
+    return buckets;
+}
+
+/* initial charts (uses server-provided aggregated lists for full dataset) */
+let primaryChart = null;
+let trendChart = null;
+
+function renderCharts() {
+    const metric = document.getElementById("chartMetric").value;
+    const compare = document.getElementById("chartCompare").value;
+
+    // For primary chart we use server aggregates if available; otherwise compute from pageLoans
+    const labels = [];
+    const data = [];
+
+    if (compare === "type") {
+        // use server total_amount_by_type or fallback
+        const server = {{ total_amount_by_type|safe }};
+        if (server && server.length) {
+            server.forEach(item => {
+                labels.push(item.loan_type);
+                data.push(metric === "count" ? 0 : parseFloat(item.total));
+            });
+            if (metric === "count") {
+                // fallback compute counts
+                const counts = {{ loan_count_by_type|safe }};
+                labels.length = 0; data.length = 0;
+                counts.forEach(i => { labels.push(i.loan_type); data.push(i.count); });
+            }
+        } else {
+            const agg = buildAggregates(metric, "type");
+            Object.keys(agg).forEach(k => { labels.push(k); data.push(agg[k]); });
+        }
+    } else {
+        const server = {{ total_amount_by_status|safe }};
+        if (server && server.length) {
+            server.forEach(item => {
+                labels.push(item.status);
+                data.push(metric === "count" ? 0 : parseFloat(item.total));
+            });
+            if (metric === "count") {
+                const counts = {{ loan_count_by_status|safe }};
+                labels.length = 0; data.length = 0;
+                counts.forEach(i => { labels.push(i.status); data.push(i.count); });
+            }
+        } else {
+            const agg = buildAggregates(metric, "status");
+            Object.keys(agg).forEach(k => { labels.push(k); data.push(agg[k]); });
+        }
+    }
+
+    // destroy existing chart if present
+    if (primaryChart) primaryChart.destroy();
+    const ctx = document.getElementById('primaryChart').getContext('2d');
+    primaryChart = new Chart(ctx, {
+        type: metric === "count" ? "bar" : (metric === "outstanding" ? "bar" : "bar"),
+        data: { labels: labels, datasets: [{ label: metric, data: data }] },
+        options: { responsive: true }
+    });
+
+    // Trend chart
+    if (trendChart) trendChart.destroy();
+    const tctx = document.getElementById('trendChart').getContext('2d');
+    trendChart = new Chart(tctx, {
+        type: 'line',
+        data: {
+            labels: monthlyTrend.map(x => x.month),
+            datasets: [{ label: 'Loans Created', data: monthlyTrend.map(x => x.count), tension: 0.3 }]
+        }
+    });
+}
+
+/* side panel logic */
+function togglePanel(open) {
+    const panel = document.getElementById('loanDetailPanel');
+    if (open) panel.classList.add('open');
+    else panel.classList.remove('open');
+}
+
+async function fetchLoanDetail(pk) {
+    const url = new URL("{% url 'loans:loan_detail_json' 0 %}".replace('/0/', `/${pk}/`), window.location.origin);
+    const res = await fetch(url.toString(), { credentials: 'same-origin' });
+    if (!res.ok) {
+        document.getElementById('loanDetailContent').innerHTML = "<p class='small-muted'>Unable to load loan details.</p>";
+        togglePanel(true);
+        return;
+    }
+    const data = await res.json();
+    renderLoanDetail(data);
+    togglePanel(true);
+}
+
+function renderLoanDetail(data) {
+    let html = `
+        <h5>Loan #${data.id}</h5>
+        <p><strong>User:</strong> ${data.user}</p>
+        <p><strong>Type:</strong> ${data.loan_type}</p>
+        <p><strong>Amount:</strong> ₦${data.amount.toFixed(2)}</p>
+        <p><strong>Interest Rate:</strong> ${data.interest_rate}%</p>
+        <p><strong>Term:</strong> ${data.term_months} months</p>
+        <p><strong>Status:</strong> ${data.status}</p>
+        <p><strong>Total Payable:</strong> ₦${data.total_payable.toFixed(2)}</p>
+        <p><strong>Total Repaid:</strong> ₦${data.total_repaid.toFixed(2)}</p>
+        <p><strong>Outstanding:</strong> ₦${data.outstanding.toFixed(2)}</p>
+        <hr>
+        <h6>Repayments</h6>
+    `;
+    if (data.repayments && data.repayments.length) {
+        html += "<ul>";
+        data.repayments.forEach(r => {
+            html += `<li>₦${parseFloat(r.amount).toFixed(2)} — ${r.date}</li>`;
+        });
+        html += "</ul>";
+    } else {
+        html += "<p class='small-muted'>No repayments</p>";
+    }
+    document.getElementById('loanDetailContent').innerHTML = html;
+}
+
+/* click row to open detail */
+document.addEventListener('DOMContentLoaded', function() {
+    renderCharts();
+
+    // attach click to loan rows
+    document.querySelectorAll('.loan-row').forEach(r => {
+        r.addEventListener('click', () => {
+            const pk = r.getAttribute('data-loan-id');
+            fetchLoanDetail(pk);
+        });
+    });
+
+    // search
+    document.getElementById("loanSearch").addEventListener("keyup", function() {
+        const term = this.value.toLowerCase();
+        document.querySelectorAll("#loanTable tbody tr").forEach(r => {
+            r.style.display = r.innerText.toLowerCase().includes(term) ? "" : "none";
+        });
+    });
+});
+</script>
+
+{% endblock %}

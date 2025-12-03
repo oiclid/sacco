@@ -1,0 +1,130 @@
+{% extends "base_pdf.html" %} 
+{# Use a PDF-specific base template with inline CSS, not the web base #}
+
+{% block content %}
+<h1 style="text-align:center; margin-bottom:20px;">
+    System-Wide Report (As At {{ as_at }})
+</h1>
+
+<!-- SUMMARY -->
+<h2>Summary</h2>
+<table class="table">
+    <tr>
+        <th>Total Accounts</th>
+        <td>{{ summary.total_accounts }}</td>
+    </tr>
+    <tr>
+        <th>Total Savings (₦)</th>
+        <td>{{ summary.total_savings|floatformat:2 }}</td>
+    </tr>
+    <tr>
+        <th>Total Loan Exposure (₦)</th>
+        <td>{{ summary.total_loans|floatformat:2 }}</td>
+    </tr>
+    <tr>
+        <th>Net Position (₦)</th>
+        <td><strong>{{ summary.net_position|floatformat:2 }}</strong></td>
+    </tr>
+</table>
+
+<hr>
+
+<!-- SAVINGS BREAKDOWN -->
+<h2>Savings Breakdown</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th>Total Amount (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in savings_totals.items %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<hr>
+
+<!-- LOANS BREAKDOWN -->
+<h2>Loan Breakdown</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Loan Type</th>
+            <th>Total Amount (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in loan_totals.items %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<hr>
+
+<!-- TEXT-ONLY CHART SUMMARY -->
+<h2>Charts (Summary Only)</h2>
+
+<h3>Savings vs Loans</h3>
+<table class="table">
+    <tr>
+        <th>Total Savings</th>
+        <td>{{ summary.total_savings|floatformat:2 }}</td>
+    </tr>
+    <tr>
+        <th>Total Loans</th>
+        <td>{{ summary.total_loans|floatformat:2 }}</td>
+    </tr>
+</table>
+
+<h3>Loan Types Breakdown</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Loan Type</th>
+            <th>Value (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in loan_totals.items %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+/* Inline PDF-safe CSS */
+body {
+    font-family: sans-serif;
+    font-size: 13px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+.table th, .table td {
+    padding: 6px 8px;
+    border: 1px solid #444;
+}
+
+.table th {
+    background: #e8e8e8;
+}
+</style>
+
+{% endblock %}

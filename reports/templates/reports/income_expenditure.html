@@ -1,0 +1,72 @@
+{% extends "reports/base.html" %}
+
+{% block title %}Income & Expenditure Report{% endblock %}
+
+{% block content %}
+<h1>Income & Expenditure Report</h1>
+
+<!-- Filters -->
+<form method="get" class="mb-3">
+    <label>From: <input type="date" name="from" value="{{ request.GET.from }}"></label>
+    <label>To: <input type="date" name="to" value="{{ request.GET.to }}"></label>
+    <button type="submit">Filter</button>
+    <a href="{% url 'income-expenditure' %}">Reset</a>
+</form>
+
+<!-- Export Links -->
+<div class="mb-3">
+    <a href="?{% querystring request.GET 'export'='csv' %}">Export CSV</a> |
+    <a href="?{% querystring request.GET 'export'='json' %}">Export JSON</a> |
+    <a href="?{% querystring request.GET 'export'='xlsx' %}">Export XLSX</a>
+</div>
+
+<!-- Summary Table -->
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th>Amount (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in report.items %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+            <th>Total Income</th>
+            <th>{{ total_income|floatformat:2 }}</th>
+        </tr>
+        <tr>
+            <th>Total Expenditure</th>
+            <th>{{ total_expenditure|floatformat:2 }}</th>
+        </tr>
+        <tr>
+            <th>Net Result</th>
+            <th>{{ net_result|floatformat:2 }}</th>
+        </tr>
+    </tbody>
+</table>
+
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+th, td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+th {
+    background-color: #f4f4f4;
+    text-align: left;
+}
+form label {
+    margin-right: 10px;
+}
+</style>
+
+{% endblock %}

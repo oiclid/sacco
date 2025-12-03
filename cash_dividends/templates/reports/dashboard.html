@@ -1,0 +1,57 @@
+{% extends "cash_dividends/base.html" %}
+
+{% block content %}
+<div class="dashboard-box d-flex flex-wrap gap-3">
+    <div class="dashboard-card p-3 border rounded" style="width:220px; background:#f8f9fa;">
+        <div class="dashboard-title">Total Dividends Paid</div>
+        <div class="dashboard-value">₦{{ stats.total_dividends|floatformat:2 }}</div>
+    </div>
+    <div class="dashboard-card p-3 border rounded" style="width:220px; background:#f8f9fa;">
+        <div class="dashboard-title">Total Withdrawals</div>
+        <div class="dashboard-value">₦{{ stats.total_withdrawals|floatformat:2 }}</div>
+    </div>
+    <div class="dashboard-card p-3 border rounded" style="width:220px; background:#f8f9fa;">
+        <div class="dashboard-title">Active Accounts</div>
+        <div class="dashboard-value">{{ stats.active_accounts }}</div>
+    </div>
+    <div class="dashboard-card p-3 border rounded" style="width:220px; background:#f8f9fa;">
+        <div class="dashboard-title">Accounts with Charges</div>
+        <div class="dashboard-value">{{ stats.accounts_with_charges }}</div>
+    </div>
+</div>
+
+<div id="charts" class="mt-4">
+    <h3>Charts</h3>
+    <canvas id="dividends-chart" width="400" height="200"></canvas>
+    <canvas id="withdrawals-chart" width="400" height="200"></canvas>
+</div>
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const dividendsData = {{ dividends_by_account|json_script:"dividends-data" }};
+const withdrawalsData = {{ withdrawals_by_account|json_script:"withdrawals-data" }};
+
+// Dividends Chart
+const ctxDiv = document.getElementById('dividends-chart').getContext('2d');
+new Chart(ctxDiv, {
+    type: 'bar',
+    data: {
+        labels: Object.keys(dividendsData),
+        datasets: [{ label: 'Dividends Paid', data: Object.values(dividendsData), backgroundColor: 'rgba(75, 192, 192, 0.6)' }]
+    },
+    options: { responsive: true }
+});
+
+// Withdrawals Chart
+const ctxWith = document.getElementById('withdrawals-chart').getContext('2d');
+new Chart(ctxWith, {
+    type: 'pie',
+    data: {
+        labels: Object.keys(withdrawalsData),
+        datasets: [{ label: 'Withdrawals', data: Object.values(withdrawalsData), backgroundColor: ['#36a2eb','#ff6384','#ffcd56','#4bc0c0'] }]
+    },
+    options: { responsive: true }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "loans/base.html" %}
+
+{% block title %}Loans Dashboard{% endblock %}
+
+{% block content %}
+<h1>Loans Dashboard</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-header">Total Loans</div>
+            <div class="card-body">
+                <h3 class="card-title">₦{{ total_amount|floatformat:2 }}</h3>
+                <p>{{ total_loans }} loans</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Total Repaid</div>
+            <div class="card-body">
+                <h3 class="card-title">₦{{ total_repaid|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-header">Outstanding</div>
+            <div class="card-body">
+                <h3 class="card-title">₦{{ total_outstanding|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <h4>Loan Amount by Type</h4>
+    <canvas id="loanTypeChart" width="400" height="200"></canvas>
+</div>
+
+<div class="chart-container">
+    <h4>Loan Amount by Status</h4>
+    <canvas id="loanStatusChart" width="400" height="200"></canvas>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const loanTypes = {{ loan_types_data|safe }};
+    const loanStatuses = {{ loan_status_data|safe }};
+
+    const ctxType = document.getElementById('loanTypeChart').getContext('2d');
+    new Chart(ctxType, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(loanTypes),
+            datasets: [{
+                label: 'Total Amount by Loan Type',
+                data: Object.values(loanTypes),
+                backgroundColor: 'rgba(54, 162, 235, 0.6)'
+            }]
+        },
+        options: { responsive: true }
+    });
+
+    const ctxStatus = document.getElementById('loanStatusChart').getContext('2d');
+    new Chart(ctxStatus, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(loanStatuses),
+            datasets: [{
+                label: 'Total Amount by Status',
+                data: Object.values(loanStatuses),
+                backgroundColor: ['#36a2eb', '#ff6384', '#ffcd56', '#4bc0c0', '#9966ff']
+            }]
+        },
+        options: { responsive: true }
+    });
+</script>
+{% endblock %}

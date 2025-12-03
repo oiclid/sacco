@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load static %}
+{% load json_script %}
+
+{% block content %}
+<h1>System-Wide Report (As At {{ as_at }})</h1>
+
+<!-- Export Links -->
+<div class="mb-3">
+    <a href="?export=csv">Export CSV</a> |
+    <a href="?export=json">Export JSON</a> |
+    <a href="?export=pdf">Export PDF</a> |
+    <a href="?export=xlsx">Export XLSX</a>
+</div>
+
+<!-- High-Level Summary -->
+<h2>Summary</h2>
+<table class="table">
+    <tr>
+        <th>Total Accounts</th>
+        <td>{{ summary.total_accounts }}</td>
+    </tr>
+    <tr>
+        <th>Total Savings (₦)</th>
+        <td>{{ summary.total_savings|floatformat:2 }}</td>
+    </tr>
+    <tr>
+        <th>Total Loan Exposure (₦)</th>
+        <td>{{ summary.total_loans|floatformat:2 }}</td>
+    </tr>
+    <tr>
+        <th>Net Position (₦)</th>
+        <td><strong>{{ summary.net_position|floatformat:2 }}</strong></td>
+    </tr>
+</table>
+
+<hr>
+
+<!-- Savings Breakdown -->
+<h2>Savings Breakdown</h2>
+<div style="overflow-x:auto;">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th>Total Amount (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in savings_totals.items %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<hr>
+
+<!-- Loans Breakdown -->
+<h2>Loan Breakdown</h2>
+<div style="overflow-x:auto;">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Loan Type</th>
+            <th>Total Amount (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in loan_totals.items %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<hr>
+
+<!-- Charts -->
+<h2>Charts</h2>
+<div style="width: 60%; margin: auto;">
+    <h3>Savings vs Loans (Bar Chart)</h3>
+    <canvas id="summary-bar-chart"></canvas>
+</div>
+
+<div style="width: 60%; margin: auto; margin-top: 40px;">
+    <h3>Loan Types Breakdown (Pie Chart)</h3>
+    <canvas id="loan-pie-chart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Savings vs Loans summary chart
+const barData = {
+    labels: ['Total Savings', 'Total Loans'],
+    datasets: [{
+        label: '₦ Value',
+        data: [{{ summary.total_savings }}, {{ summary.total_loans }}],
+        backgroundColor: ['rgba(54,162,235,0.6)','rgba(255,99,132,0.6)']
+    }]
+};
+
+new Chart(document.getElementById('summary-bar-chart'), {
+    type: 'bar',
+    data: barData,
+    options: { responsive: true }
+});
+
+// Loan breakdown pie chart
+const loanBreakdown = {{ loan_totals|json_script:"loan-totals" }};
+const loanLabels = Object.keys(loanBreakdown);
+const loanValues = Object.values(loanBreakdown);
+const loanColors = loanLabels.map((_, i) => `hsl(${i * 60 % 360}, 70%, 50%)`);
+
+new Chart(document.getElementById('loan-pie-chart'), {
+    type: 'pie',
+    data: {
+        labels: loanLabels,
+        datasets: [{ data: loanValues, backgroundColor: loanColors }]
+    },
+    options: { responsive: true }
+});
+</script>
+
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+th, td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+th {
+    background: #f4f4f4;
+    text-align: left;
+}
+</style>
+
+{% endblock %}

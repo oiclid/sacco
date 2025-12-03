@@ -1,0 +1,70 @@
+{% extends "reports/base.html" %}
+
+{% block title %}Audit Report{% endblock %}
+
+{% block content %}
+<h1>Audit Report</h1>
+
+<!-- Filters -->
+<form method="get" class="mb-3">
+    <label>From: <input type="date" name="from" value="{{ request.GET.from }}"></label>
+    <label>To: <input type="date" name="to" value="{{ request.GET.to }}"></label>
+    <button type="submit">Filter</button>
+    <a href="{% url 'audit-report' %}">Reset</a>
+</form>
+
+<!-- Export Links -->
+<div class="mb-3">
+    <a href="?{% querystring request.GET 'export'='csv' %}">Export CSV</a> |
+    <a href="?{% querystring request.GET 'export'='json' %}">Export JSON</a> |
+    <a href="?{% querystring request.GET 'export'='xlsx' %}">Export XLSX</a>
+</div>
+
+<!-- Audit Table -->
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Object</th>
+            <th>Changes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in audit_logs %}
+        <tr>
+            <td>{{ log.date }}</td>
+            <td>{{ log.user }}</td>
+            <td>{{ log.action }}</td>
+            <td>{{ log.object_repr }}</td>
+            <td>{{ log.changes }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No audit logs found for this period.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+th, td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+th {
+    background-color: #f4f4f4;
+    text-align: left;
+}
+form label {
+    margin-right: 10px;
+}
+</style>
+
+{% endblock %}

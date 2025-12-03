@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load json_script %}
+
+{% block content %}
+<h1>Reports Dashboard</h1>
+
+<!-- Charts Section -->
+<div style="display: flex; flex-wrap: wrap; justify-content: space-around; margin-top: 20px; gap: 20px;">
+
+    <!-- Loan Categories Pie Chart -->
+    <div style="flex: 1 1 45%; min-width: 300px;">
+        <h3>Loan Categories Breakdown</h3>
+        <canvas id="loan-categories-chart"></canvas>
+    </div>
+
+    <!-- Savings vs Loans Bar Chart -->
+    <div style="flex: 1 1 45%; min-width: 300px;">
+        <h3>Savings vs Loans Overview</h3>
+        <canvas id="savings-loans-chart"></canvas>
+    </div>
+
+</div>
+
+<!-- High-Level Stats -->
+<h2>Summary Stats</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Total Savings (₦)</th>
+            <th>Total Loan Exposure (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>{{ chart_data.savings_total|floatformat:2 }}</td>
+            <td>{{ chart_data.loan_total|floatformat:2 }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const chartData = {{ chart_data|json_script:"chart-data" }};
+
+// Loan Categories Pie Chart
+new Chart(document.getElementById('loan-categories-chart'), {
+    type: 'pie',
+    data: {
+        labels: chartData.loan_category_labels,
+        datasets: [{
+            data: chartData.loan_category_totals,
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56',
+                '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
+            ]
+        }]
+    },
+    options: { responsive: true }
+});
+
+// Savings vs Loans Bar Chart
+new Chart(document.getElementById('savings-loans-chart'), {
+    type: 'bar',
+    data: {
+        labels: ['Total Savings', 'Total Loans'],
+        datasets: [{
+            label: '₦ Value',
+            data: [chartData.savings_total, chartData.loan_total],
+            backgroundColor: ['#36A2EB', '#FF6384']
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+
+<style>
+table {
+    width: 50%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+th, td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+th {
+    background: #f4f4f4;
+    text-align: left;
+}
+</style>
+
+{% endblock %}

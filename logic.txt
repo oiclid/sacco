@@ -1,0 +1,72 @@
+savings:
+- fixed savings (premium)
+- target savings (special savings)
+- fixed deposit savings (flexible)
+- investments (shares)
+
+should include percentage interest option. monthly. editable
+
+loans 
+- major @ 10% flat rate (24 months)
+- car @ 15% (36 months)
+- electronics @ 10% (18 months)
+- land @ 10% 24 mnths
+- essential commodities 10% 12 months
+- education loan 10% 6 months
+- emergency 5% 4 months
+
+
+cash_dividends:
+- special savings
+- fixed deposits
+- dividends
+- withdrawal benefits (percentage added if retiring. charged if not rettiring)
+- death benefit (percentage charge on all existing accounts and accrued to death account. account would be permanently closed)
+- death charges (percentage charged on account and accrued to death benefit of different account.)
+- default charges
+- savings withdrawal
+- cash receipts (when cash is deposited)
+
+repots:
+- cashbook
+- monthly repayments
+- monthly disbursments
+-monthly revenue
+- bank statements
+- bank mandate
+- monthly bank reconciliation
+- bank charges
+- accounts ledger
+- income and expenditure statemnet
+- statement of financial position
+- audit report
+
+accounts:
+- information from all the other apps
+- Registration number (key. would be entered manually from records)
+- first name
+- middle name (optional)
+- lastname
+
+reports should also include table as follows:
+
+as at (date)
+|Accounts Identity| Savings|loans|balance outstanding|
+
+under accounts identity:
+
+|Number (Registartion number)| Name|
+
+under savings
+
+|total premium| fixed & target deposits| shares investment|
+
+under loans:
+
+all the loans categories
+
+balance outsanding: 
+
+net balance
+
+would this do, or would we need to break it down?

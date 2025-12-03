@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+{% load querystring %}
+{% load json_script %}
+
+{% block content %}
+<h1>Account Ledger: {{ account.registration_number }} - {{ account.first_name }} {{ account.last_name }}</h1>
+
+<!-- Filters -->
+<form method="get" class="mb-3">
+    <label>As At: <input type="date" name="as_at" value="{{ request.GET.as_at }}"></label>
+    <label>Category Search: <input type="text" name="category" value="{{ request.GET.category }}" placeholder="Savings or Loan"></label>
+    <button type="submit">Filter</button>
+    <a href="{% url 'account-ledger' account.id %}">Reset</a>
+</form>
+
+<!-- Export Links -->
+<div class="mb-3">
+    <a href="?{% querystring request.GET 'export'='csv' %}">Export CSV</a> |
+    <a href="?{% querystring request.GET 'export'='json' %}">Export JSON</a> |
+    <a href="?{% querystring request.GET 'export'='xlsx' %}">Export XLSX</a> |
+    <a href="?{% querystring request.GET 'export'='pdf' %}">Export PDF</a>
+</div>
+
+<!-- Savings Table -->
+<h2>Savings</h2>
+<div style="overflow-x:auto;">
+<table class="table" id="savings-table">
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th>Amount (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in report.savings.items %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <th>Total Savings</th>
+            <th>{{ report.total_savings|floatformat:2 }}</th>
+        </tr>
+    </tfoot>
+</table>
+</div>
+
+<hr>
+
+<!-- Loans Table -->
+<h2>Loans</h2>
+<div style="overflow-x:auto;">
+<table class="table" id="loans-table">
+    <thead>
+        <tr>
+            <th>Loan Type</th>
+            <th>Amount (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in report.loans.items %}
+        {% if key != "total_loan_balance" %}
+        <tr>
+            <td>{{ key|capfirst|replace:"_"," " }}</td>
+            <td>{{ value|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        <tr>
+            <th>Total Loan Balance</th>
+            <th>{{ report.loans.total_loan_balance|floatformat:2 }}</th>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+<hr>
+
+<!-- Net Balance -->
+<h2>Net Balance: ₦{{ report.net_balance|floatformat:2 }}</h2>
+
+<hr>
+
+<!-- Charts -->
+<div style="width: 60%; margin:auto;">
+    <h3>Loan Distribution (Pie Chart)</h3>
+    <canvas id="loan-pie-chart"></canvas>
+</div>
+
+<div style="width: 60%; margin:auto; margin-top:40px;">
+    <h3>Savings Overview (Bar Chart)</h3>
+    <canvas id="savings-bar-chart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Loan pie chart
+const loanData = {{ report.loans|json_script:"loan-data" }};
+const loanLabels = Object.keys(loanData).filter(k => k !== "total_loan_balance");
+const loanValues = loanLabels.map(k => loanData[k]);
+const loanColors = loanLabels.map((_, i) => `hsl(${i * 60 % 360}, 70%, 50%)`);
+
+new Chart(document.getElementById('loan-pie-chart'), {
+    type: 'pie',
+    data: {
+        labels: loanLabels,
+        datasets: [{ data: loanValues, backgroundColor: loanColors }]
+    },
+    options: { responsive: true }
+});
+
+// Savings bar chart
+const savingsData = JSON.parse(document.getElementById('savings-data').textContent);
+const savingsLabels = Object.keys(savingsData);
+const savingsValues = Object.values(savingsData);
+const savingsColors = savingsLabels.map((_, i) => `hsl(${i * 90 % 360}, 60%, 50%)`);
+
+new Chart(document.getElementById('savings-bar-chart'), {
+    type: 'bar',
+    data: {
+        labels: savingsLabels,
+        datasets: [{
+            label: '₦ Value',
+            data: savingsValues,
+            backgroundColor: savingsColors
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+    }
+});
+
+// Sortable tables
+['savings-table','loans-table'].forEach(tableId => {
+    const table = document.getElementById(tableId);
+    table.querySelectorAll('th').forEach((th, index) => {
+        th.addEventListener('click', () => {
+            const tbody = table.querySelector('tbody');
+            Array.from(tbody.rows)
+                .sort((a, b) => parseFloat(a.cells[index].innerText.replace(/,/g,'')) - parseFloat(b.cells[index].innerText.replace(/,/g,'')))
+                .forEach(tr => tbody.appendChild(tr));
+        });
+    });
+});
+</script>
+
+<style>
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+th, td { padding: 8px; border: 1px solid #ddd; }
+th { background: #f4f4f4; cursor: pointer; }
+</style>
+
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% load json_script %}
+
+{% block content %}
+<h1>Cashbook Report</h1>
+
+<!-- Filters -->
+<form method="get" class="mb-3">
+    <label>From: <input type="date" name="from" value="{{ request.GET.from }}"></label>
+    <label>To: <input type="date" name="to" value="{{ request.GET.to }}"></label>
+    <label>Account: <input type="text" name="account" value="{{ request.GET.account }}" placeholder="Search account"></label>
+    <button type="submit">Filter</button>
+    <a href="{% url 'cashbook-report' %}">Reset</a>
+</form>
+
+<!-- Export Links -->
+<div class="mb-3">
+    <a href="?{% querystring request GET 'export'='csv' %}">Export CSV</a> |
+    <a href="?{% querystring request GET 'export'='json' %}">Export JSON</a> |
+    <a href="?{% querystring request GET 'export'='xlsx' %}">Export XLSX</a> |
+    <a href="?{% querystring request GET 'export'='pdf' %}">Export PDF</a>
+</div>
+
+<!-- Totals -->
+{% with savings_total=0 loan_total=0 %}
+{% for row in rows %}
+    {% if row.type.startswith:"Savings" %}{% with savings_total=savings_total|add:row.amount %}{% endwith %}{% endif %}
+    {% if row.type.startswith:"Loan" %}{% with loan_total=loan_total|add:row.amount %}{% endwith %}{% endif %}
+{% endfor %}
+<p><strong>Total Savings:</strong> ₦{{ savings_total|floatformat:2 }}</p>
+<p><strong>Total Loans:</strong> ₦{{ loan_total|floatformat:2 }}</p>
+<p><strong>Overall Total:</strong> ₦{{ savings_total|add:loan_total|floatformat:2 }}</p>
+{% endwith %}
+
+<!-- Transactions Table -->
+<table class="table" id="cashbook-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Account</th>
+            <th>Transaction Type</th>
+            <th>Amount (₦)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.date }}</td>
+            <td>{{ row.user }}</td>
+            <td>{{ row.type }}</td>
+            <td>{{ row.amount|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No transactions found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<hr>
+
+<!-- Charts -->
+<h2>Summary Charts</h2>
+
+<div style="width: 60%; margin:auto;">
+    <h3>Savings vs Loans (Bar Chart)</h3>
+    <canvas id="cashbook-bar-chart"></canvas>
+</div>
+
+<div style="width: 60%; margin:auto; margin-top:40px;">
+    <h3>Transaction Type Distribution (Pie Chart)</h3>
+    <canvas id="cashbook-pie-chart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const txRows = {{ rows|json_script:"tx-rows" }};
+
+let savingsTotal = 0, loanTotal = 0;
+const typeCounts = {};
+
+txRows.forEach(r => {
+    if (r.type.startsWith("Savings")) savingsTotal += r.amount;
+    if (r.type.startsWith("Loan")) loanTotal += r.amount;
+
+    typeCounts[r.type] = (typeCounts[r.type] || 0) + r.amount;
+});
+
+// Bar chart
+new Chart(document.getElementById('cashbook-bar-chart'), {
+    type: 'bar',
+    data: {
+        labels: ['Savings', 'Loans'],
+        datasets: [{
+            label: 'Total Amount (₦)',
+            data: [savingsTotal, loanTotal],
+            backgroundColor: ['rgba(75,192,192,0.6)','rgba(255,99,132,0.6)']
+        }]
+    },
+    options: { responsive: true }
+});
+
+// Pie chart
+new Chart(document.getElementById('cashbook-pie-chart'), {
+    type: 'pie',
+    data: {
+        labels: Object.keys(typeCounts),
+        datasets: [{ 
+            data: Object.values(typeCounts),
+            backgroundColor: Object.keys(typeCounts).map((_, i) => `hsl(${i*60%360},70%,50%)`)
+        }]
+    },
+    options: { responsive: true }
+});
+
+// Table sorting
+document.querySelectorAll('#cashbook-table th').forEach(th => {
+    th.addEventListener('click', () => {
+        const table = th.closest('table');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const index = Array.from(th.parentNode.children).indexOf(th);
+        const ascending = !th.dataset.asc || th.dataset.asc === "false";
+
+        rows.sort((a, b) => {
+            const aText = a.children[index].innerText.replace(/,/g,'');
+            const bText = b.children[index].innerText.replace(/,/g,'');
+            return ascending ? aText.localeCompare(bText, undefined, {numeric:true}) : bText.localeCompare(aText, undefined, {numeric:true});
+        });
+
+        tbody.append(...rows);
+        th.dataset.asc = ascending;
+    });
+});
+</script>
+
+<style>
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+th, td { padding: 8px; border: 1px solid #ddd; }
+th { background: #f4f4f4; cursor: pointer; }
+form label { margin-right: 10px; }
+</style>
+
+{% endblock %}
