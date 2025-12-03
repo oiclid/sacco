@@ -1,0 +1,5 @@
+backend/.env
+venv/
+logic.txt
+rando.py
+rando.tx
